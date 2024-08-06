@@ -4,61 +4,47 @@ import "./index.css";
 import { Pet } from "./Pets";
 import Modal from "react-modal";
 import NewPetModal from "./NewPetModal";
-import { listPets, createPet } from "./api";
+import { listPets, createPet, updatePet, deletePet } from "./api";
+import EditPetModal from "./EditPetModal";
 
 const App = () => {
   const [pets, setPets] = useState([]);
   const [isLoading, setLoading] = useState(false);
   const [isNewPetOpen, setNewPetOpen] = useState(false);
-
-  // useEffect(() => {
-  //   fetch("http://localhost:3001/pets")
-  //     .then((res) => res.json())
-  //     .then((pets) => setPets(pets));
-  // }, []);
+  const [currentPet, setCurrentPet] = useState(null);
 
   useEffect(() => {
-    // async function getData() {
-    //   setLoading(true);
-    //   If there were an error, loading would never be set to false, so we have to use a try/catch to make that happen in this situation
-    //   It's only set to false on an ideal path
-    //   try {
-    //     const res = await fetch("http://localhost:3001/pets");
-    //     const pets = await res.json();
-    //     setPets(pets);
-    //     setLoading(false);
-    //   } catch (e) {
-    //     setLoading(false);
-    //   }
-    // }
-    // getData();
-
     setLoading(true);
     listPets().then(pets => setPets(pets))
     .finally(() => setLoading(false));
     
   }, []);
 
-  // const addPet = async ({name, kind, photo}) => {
-  //   setPets(
-  //     [
-  //       ...pets,
-  //       {
-  //         id: Math.random(),
-  //         name,
-  //         kind,
-  //         photo
-  //       }
-  //     ]
-  //   )
-  //   setNewPetOpen(false);
-  // };
-
   const addPet = async (pet) => {
     return createPet(pet).then((newPet) => {
       setPets([...pets, newPet]);
       setNewPetOpen(false);
     });
+  };
+
+  const savePet = async (pet) => {
+    return updatePet(pet).then(updatePet => {
+      setPets(pets => pets.map((pet) => (pet.id === updatePet.id ? updatePet : pet))
+    );
+    setCurrentPet(null);
+    });
+  };
+
+  const removePet = (byePet) => {
+    const result = window.confirm(
+      `Are you sure you want to adopt ${byePet.name}`
+    );
+    if (result) {
+      //The deletePet function receives an object from the onRemove function and then setPets check if pet.id is not equal the object id to then change its state
+      deletePet(byePet).then(() => {
+        setPets(pets => pets.filter(pet => pet.id !== byePet.id))
+      })
+    }
   };
 
   return (
@@ -71,8 +57,15 @@ const App = () => {
         <>
           <ul>
             {pets.map((pet) => (
-              <li key={pet.id}>
-                <Pet pet={pet} />
+              <li key={pet.id}> 
+                <Pet
+                  pet={pet}
+                  onEdit={() => {
+                    console.log("pet", pet);
+                    setCurrentPet(pet);
+                  }}
+                  onRemove={() => removePet(pet)}
+                />
               </li>
             ))}
           </ul>
@@ -83,6 +76,10 @@ const App = () => {
       {/*Button with form to add new pet only renders if var isNewPetOpen is true*/}
       {isNewPetOpen && (
         <NewPetModal onSave={addPet} onCancel={() => setNewPetOpen(false)} />
+      )}
+
+      {currentPet && (
+        <EditPetModal pet={currentPet} onSave={savePet} onCancel={() => setNewPetOpen(false)} />
       )}
 
     </main>
